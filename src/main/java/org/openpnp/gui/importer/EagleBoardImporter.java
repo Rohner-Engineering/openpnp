@@ -58,6 +58,8 @@ import org.openpnp.model.Part;
 import org.openpnp.model.Placement;
 import org.openpnp.model.Point;
 import org.openpnp.model.eagle.EagleLoader;
+import org.openpnp.model.eagle.xml.Attribute;
+//import org.openpnp.model.eagle.xml.Board;
 import org.openpnp.model.eagle.xml.Element;
 import org.openpnp.model.eagle.xml.Layer;
 import org.openpnp.model.eagle.xml.Library;
@@ -74,9 +76,7 @@ import com.jgoodies.forms.layout.RowSpec;
 @SuppressWarnings("serial")
 public class EagleBoardImporter implements BoardImporter {
     private final static String NAME = "CadSoft EAGLE Board";
-    private final static String DESCRIPTION =
-            "Import files directly from EAGLE's <filename>.brd file.";
-
+    private final static String DESCRIPTION = "Import files directly from EAGLE's <filename>.brd file.";
     private static Board board;
     private File boardFile;
     static private Double mil_to_mm = 0.0254;
@@ -225,11 +225,14 @@ public class EagleBoardImporter implements BoardImporter {
 
             // Now we got through each of the parts
             if (!boardToProcess.board.getElements().getElement().isEmpty()) {
-
+            	
                 // Process each of the element items
                 for (Element element : boardToProcess.board.getElements().getElement()) {
+                	
+                	//Attribute attribute = new Attribute();
+                	//boardToProcess.board.getAttributes().getAttribute();
+                	
                     // first we determine if the part is on the top layer or bottom layer
-
                     Side element_side;
                     String rot = element.getRot();
                     if (rot.toUpperCase().startsWith("M")) {
@@ -266,14 +269,35 @@ public class EagleBoardImporter implements BoardImporter {
                         String value = element.getValue(); // Value
                         packageId = element.getPackage(); // Package
                         libraryId = element.getLibrary(); // Library that contains the package
+//[aa]
+//----------------------------------------------------------------------------------------------------------------
+                        String pkgId = libraryId + "-" + packageId; //[aa] _dr_Standard-X_CON_6X1_2.54
+//                        String pkgId = packageId; //[aa] X_CON_6X1_2.54
 
-                        String pkgId = libraryId + "-" + packageId;
-
-                        String partId = libraryId + "-" + packageId;
+                        String partId = libraryId + "-" + packageId; //[aa] _dr_Standard-0805
                         if (value.trim().length() > 0) {
-                            partId += "-" + value;
+//                            partId += "-" + value; //[aa] _dr_Standard-0805-470p
+                        	partId = packageId + "-" + value; //[aa] 0805-470p
                         }
 
+                        if (value.trim().length() == 0) { //[aa] > changed to == because if value = "" in eagle.brd file
+                        	partId = packageId /*+ value*/; //[aa] X_CON_6X1_2.54
+                        }      
+                        //[aa] "AREA"
+                        for (Attribute a : element.getAttribute()) {
+                            try {
+                            	if (a.getName().equals("AREA")) {
+                                	//[aa] Here is the value of the AREA attribute.
+                                    partId += "-" + a.getValue();
+                                    }
+                            }
+                            catch(NullPointerException e) 
+                            { 
+                                System.out.print("NullPointerException Caught"); 
+                            } 
+                        }
+//----------------------------------------------------------------------------------------------------------------                        
+                        
                         part = cfg.getPart(partId);
                         Package pkg = cfg.getPackage(pkgId);
 
